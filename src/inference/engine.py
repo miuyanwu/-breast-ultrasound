@@ -84,7 +84,15 @@ def resolve_inference_models(preset: str = 'compact'):
         return ENSEMBLE4_MODELS
     if preset not in INFERENCE_PRESETS:
         raise ValueError(f"Unknown inference preset: {preset}")
-    return INFERENCE_PRESETS[preset]
+    model_names = INFERENCE_PRESETS[preset]
+    # 验证所有权重文件都存在
+    for name in model_names:
+        if not _has_weight(name):
+            raise FileNotFoundError(
+                f"推理模式 '{preset}' 需要 '{name}' 的权重文件，但未找到。"
+                f"如需使用完整历史模型，请联系管理员获取权重文件。"
+            )
+    return model_names
 
 
 def resolve_fusion_config(preset: str, model_names):

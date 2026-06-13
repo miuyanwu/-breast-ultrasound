@@ -518,20 +518,34 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
+    # 动态构建可用推理模式列表 (排除权重缺失的)
+    preset_options = []
+    preset_labels = {
+        "seg_then_classify": "🏆 V10 分割→分类 (AUC 0.9225)",
+        "compact": "Compact 自动 (V9)",
+        "compact_weighted": "Compact 加权 logit",
+        "ensemble4": "4 模型融合对照",
+        "distill": "DISTILL 单模型",
+        "soup": "SOUP 权重汤单模型",
+        "v23": "V2.3 单模型",
+    }
+    # 检查每个预设所需权重是否都存在
+    for p in ["seg_then_classify", "compact", "compact_weighted", "ensemble4", "distill", "soup", "v23"]:
+        try:
+            resolve_inference_models(p)
+            preset_options.append(p)
+        except (FileNotFoundError, ValueError):
+            pass  # 权重缺失则跳过该预设
+
+    if not preset_options:
+        preset_options = ["v23"]  # 极端回退
+
     inference_preset = st.selectbox(
         "推理模式",
-        ["seg_then_classify", "compact", "compact_weighted", "ensemble4", "distill", "soup", "v23"],
+        preset_options,
         index=0,
-        format_func=lambda x: {
-            "seg_then_classify": "🏆 V10 分割→分类 (AUC 0.9225)",
-            "compact": "Compact 自动 (V9)",
-            "compact_weighted": "Compact 加权 logit",
-            "ensemble4": "4 模型融合对照",
-            "distill": "DISTILL 单模型",
-            "soup": "SOUP 权重汤单模型",
-            "v23": "V2.3 单模型",
-        }[x],
-        help="🏆 V10 分割→分类: 先用 MiT-B2 UNet 定位病灶，再对原图+ROI分别 V9 分类后 0.5:0.5 融合 (AUC=0.9225, 当前最佳)。推理时间约为 V9 的 3 倍，但敏感度显著提升。",
+        format_func=lambda x: preset_labels[x],
+        help="🏆 V10 分割→分类: 先用 MiT-B2 UNet 定位病灶，再对原图+ROI分别 V9 分类后 0.5:0.5 融合 (AUC=0.9225)。推理时间约为 V9 的 3 倍，但敏感度显著提升。",
     )
     active_model_names = resolve_inference_models(inference_preset)
 
