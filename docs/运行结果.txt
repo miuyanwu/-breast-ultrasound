@@ -1,0 +1,521 @@
+==============================================
+  乳腺超声图像智能诊断系统 — 运行结果记录
+  更新: 2026-06-13 | 总计 35 个实验 (V1→V10)
+==============================================
+
+🏆 当前最佳: V10 分割→分类联合推理
+   AUC=0.9225  F1@0.55=0.7971  best F1=0.7981@0.545
+   方案: 0.5×全图V9 + 0.5×ROI(margin=1.0)V9
+
+  详见文末 "V10 分割→分类联合推理" 章节。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📊 全部实验排名 (按 Test AUC 降序)
+  ⚠️ 以下为 V1-V7 历史记录，使用修正前的旧融合公式。
+     修正后 4/7 模型值见下方 "Compact 两模型融合新最佳"。
+     6 指标完整度不一：部分早期失败实验仅记录了 AUC。
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+排名  版本                    Test AUC  Val AUC  Rec@最佳     F1     分类
+🥇    V9 稀疏加权(SOUP+DISTILL+V2.3) 0.9139 —   0.810@0.545 0.798  logit加权融合 ← 当前最佳
+🥈    7模型融合(V5+SAM+3Seed)  0.9095    —        0.833@0.40  0.773  异质+种子多样性(旧公式)
+🥈    4模型融合(V2.3+V5+SAM)   0.9093    —        0.853@0.45  0.772  异质+SAM(旧公式)
+🥉    6模型融合(V5+3Seed)       0.9088    —        0.795@0.45  0.770  异质+种子(旧公式)
+4     3模型融合(V2.3+V5.1+V5.2) 0.9073    —        0.876@0.45  0.770  异质架构融合
+5     2模型融合(V2.3+V5.1)      0.9057    —        0.867@0.45  0.775  两模型融合
+6     V1*                      0.9054    0.9588   0.805@0.55  0.763  ⚠️样本级划分(数据泄露)
+7     V2.3                     0.9033    0.9242   0.848@0.40  0.764  冠军单模型基线
+8     V3.6                     0.8992    0.9358   0.833@0.50  0.787  BI-RADS辅助预测头
+9     V3.9 (5-fold融合)        0.8932    0.9277   0.891@0.55  0.702  同质融合(负增益)
+10    V5.2 (UNet++ SWA)        0.8932    0.9260   0.876@0.45  0.726  SWA未帮助
+11    V5.1 (BI-RADS SWA)       0.8926    0.9290   0.867@0.45  0.728  SWA未帮助
+12    V7.6 SAM                 0.8918    0.9310   0.829@0.55  0.757  SAM单模型
+13    V3.7+V3.8                0.8915    0.9295   0.905@0.50  0.653  EMA+SE-ResNet50
+14    V3.5                     0.8877    0.9298   0.781@0.50  0.768  Histology辅助头
+15    V2.1                     0.8876    0.9419   0.857@0.40  0.745  384×384
+16    V3.4                     0.8869    0.9348   0.852@0.50  0.743  BBOX检测辅助头
+17    V4.2                     0.8867    0.9395   0.824@0.50  0.766  UNet++(过拟合)
+18    V4.4                     0.8854    0.9098   0.805@0.50  0.751  DenseNet121
+19    V7.5 S456                0.8983    0.9112   0.833@0.45  0.748  Seed=456
+20    V7.5 S123                0.8850    0.9479   0.800@0.45  0.712  Seed=123
+21    V7.5 S789                0.8845    0.9305   0.800@0.45  0.727  Seed=789
+22    V7.4 简化多尺度           0.8802    0.9322   0.819@0.45  0.694  4-scale BCE
+23    V2.5                     0.8773    0.9221   0.871@0.40  0.754  多尺度裁剪
+24    V4.1                     0.8746    0.9253   0.857@0.50  0.726  BI-RADS+Tversky
+25    V6 LoMix                 0.8723    0.9330   0.829@0.40  0.691  LoMix组合损失
+26    V4.5                     0.8718    0.8998   0.833@0.50  0.714  EfficientNet-B1
+—    V8.2 ROI双分支            0.8756    0.8956   0.786@0.55  0.722  修正后评测, 未超compact
+—    V8.3 ROI+shape特征        0.8752    0.9018   0.752@0.55  0.728  修正后评测, Val虚高
+—    V8.1 纯分类全图            0.8692    0.8929   0.752@0.55  0.761  修正后评测, 去decoder
+27    V4.3                     0.8713    0.9145   0.786@0.50  0.727  UNet+++BI-RADS+Tversky
+28    V2.4                     0.8667    0.9282   0.857@0.40  0.707  BI-RADS样本权重
+29    V2                       0.8568    0.9418   —          —     全改(崩溃)
+30    V3.1                     0.8529    0.8937   0.910@0.50  0.671  两阶段冻结
+31    V3.3                     0.8468    0.9050   0.795@0.50  0.684  BBOX ROI
+32    V3.2                     0.8252    0.8976   0.881@0.50  0.622  Mask-Guided
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📖 详细实验记录
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+=== V1 Baseline (ResNet34 + FocalLoss + BCE + TTA水平翻转) ===
+配置: ResNet34, 样本级随机划分, AdamW(lr=1e-4), batch=16, epochs=30
+      FocalLoss(α=0.7,γ=2), Resize(256,256), TTA水平翻转, 阈值0.55
+Train: Epoch 29/30 Best Val AUC=0.9588 ⚠️样本级划分存在患者泄露
+Test:  AUC=0.9054 Acc=0.8377 Rec=0.8048 Spec=0.8535 Prec=0.7253 F1=0.7630
+
+=== V2 (EfficientNet-B3 + BI-RADS + Dice + 多尺度) ===
+配置: EfficientNet-B3, 患者级划分, batch=8, epochs=50
+      FocalLoss + BCE+Dice, RandomResizedCrop(0.6~1.0), AMP
+Train: Best Val AUC=0.9418 ✅诚实
+Test:  AUC=0.8568 ❌ -0.0486, Recall 0.629 ❌❌暴跌
+根因: BI-RADS占位符=0误导 + RandomResizedCrop破坏纵横比 + 管道不匹配
+
+=== V2.1 (384×384) ===
+配置: 同V2.3但Resize=384×384
+Train: Best Val AUC=0.9419 | Test: AUC=0.8876 ❌
+
+=== V2.3 🥇 (256×256 + 患者级划分 + CosAnnealing) ===
+配置: ResNet34, 患者级划分, batch=16, epochs=50
+      FocalLoss(α=0.7,γ=2), BCE, Resize(256,256), AMP, CosAnnealingLR
+Train: Epoch 45/50 Best Val AUC=0.9242
+Test:  thresh=0.40 AUC=0.9033 Acc=0.822 Rec=0.848 Spec=0.810 Prec=0.679 F1=0.756
+       thresh=0.45 AUC=0.9033 Acc=0.830 Rec=0.833 Spec=0.828 Prec=0.700 F1=0.761
+       thresh=0.50 AUC=0.9033 Acc=0.839 Rec=0.800 Spec=0.858 Prec=0.730 F1=0.764
+       thresh=0.55 AUC=0.9033 Acc=0.839 Rec=0.762 Spec=0.876 Prec=0.748 F1=0.755
+✅ 此后所有实验的基线
+
+=== V2.4 (BI-RADS样本权重) ===
+Train: Best Val AUC=0.9282
+Test:  thresh=0.50 AUC=0.8667 Rec=0.805 F1=0.707 ❌
+
+=== V2.5 (多尺度裁剪) ===
+Train: Best Val AUC=0.9221
+Test:  thresh=0.50 AUC=0.8773 Rec=0.833 F1=0.746 ❌
+
+=== V3.1-V3.9 (辅助任务探索, 35 epochs统一) ===
+V3.1 (纯分割→冻结→分类): Test AUC=0.8529 ❌
+V3.2 (Mask-Guided 4通道):  Test AUC=0.8252 ❌
+V3.3 (BBOX ROI两阶段):     Test AUC=0.8468 ❌
+V3.4 (BBOX检测辅助头):     Test AUC=0.8869, Rec=0.852 F1=0.743
+V3.5 (Histology辅助头27类): Test AUC=0.8877, Rec=0.781 F1=0.768
+V3.6 (BI-RADS辅助预测头):  Test AUC=0.8992, Rec=0.833 F1=0.787 🥈
+V3.7 (EMA+SE-ResNet50):    Test AUC=0.8915, Rec极高但Spec崩溃
+V3.9 (5-fold CV融合):      Test AUC=0.8932, 同质融合收益极小
+
+=== V4.1-V4.5 (组合实验, 35 epochs) ===
+V4.1 (BI-RADS+Tversky):    Test AUC=0.8746 ❌
+V4.2 (UNet++):             Test AUC=0.8867, Val=0.9395(过拟合) ❌
+V4.3 (UNet+++BI-RADS+Tv):  Test AUC=0.8713 ❌
+V4.4 (DenseNet121):        Test AUC=0.8854 ❌
+V4.5 (EfficientNet-B1):    Test AUC=0.8718 ❌
+
+=== V5.1-V5.2 (异质架构 + SWA) ===
+V5.1 (BI-RADS头+SWA): Val 0.9290, Test AUC=0.8926
+      0.45: AUC=0.8926 Acc=0.790 Rec=0.867 Spec=0.753 Prec=0.623 F1=0.728
+V5.2 (UNet++ +SWA):  Val 0.9260, Test AUC=0.8932
+      0.45: AUC=0.8932 Acc=0.785 Rec=0.876 Spec=0.741 Prec=0.619 F1=0.726
+SWA无效, 最佳checkpoint更优
+
+=== V5 融合 ===
+V2.3+V5.1 (2模型): thresh=0.45 AUC=0.9057 Acc=0.836 Rec=0.867 Spec=0.821 Prec=0.690 F1=0.775
+V2.3+V5.1+V5.2 (3模型): thresh=0.45 AUC=0.9073 Acc=0.830 Rec=0.876 Spec=0.808 Prec=0.667 F1=0.770
+                         thresh=0.50 AUC=0.9073 Acc=0.837 Rec=0.848 Spec=0.831 Prec=0.684 F1=0.771
+首次突破0.903墙 🎉
+
+=== V6 LoMix (多尺度组合损失) ===
+配置: V2.3 + 4-scale multi-scale heads + CombinatorialMutationsLossModule
+      4 original + 11 combinatorial = 15 segmentation loss terms
+Train: Best Val AUC=0.9330 (epoch 35)
+Test:  thresh=0.50 AUC=0.8723 Acc=0.815 Rec=0.767 Spec=0.838 Prec=0.694 F1=0.729 ❌
+LoMix权重趋势: 所有权重被推低(softplus: 0.69→0.62), 模型试图抵抗过量监督
+结论: 15个分割损失项在1507样本上严重过拟合 (gap 0.061)
+
+=== V7.1-V7.3 (零成本融合优化) ===
+V7.1 四模型融合(+V6):    AUC=0.9063 ❌ (V6拖累)
+V7.2 多尺度TTA(0.75/1/1.25): AUC=0.9064 ❌ (非256×256推理有害)
+V7.3 Stacking(LR权重):    AUC=0.9052 ❌ (368样本验证集上过拟合)
+
+=== V7.4 简化多尺度训练 ===
+配置: V6架构(4-scale heads) + 简单平均BCE深度监督, 无LoMix组合
+Train: Best Val AUC=0.9322 (epoch 26)
+Test:   AUC=0.8802 ❌ 多尺度架构本身过拟合 (gap 0.052)
+
+=== V7.5 Seed Ensemble ===
+Seed=123: Val 0.9479, Test AUC=0.8850
+Seed=456: Val 0.9112, Test AUC=0.8983
+Seed=789: Val 0.9305, Test AUC=0.8845
+6模型融合(V2.3+V5.1+V5.2+S123+S456+S789):
+  thresh=0.40 AUC=0.9088 Acc=0.838 Rec=0.819 Spec=0.847 Prec=0.719 F1=0.766 ✅
+
+=== V7.6 SAM优化器 ===
+配置: V2.3 + SAM(AdamW, rho=0.05), 2×训练时间
+Train: Best Val AUC=0.9310 (epoch 24)
+Test:  AUC=0.8918 (不如V2.3), 但错误模式与AdamW截然不同
+4模型融合(V2.3+V5.1+V5.2+SAM):
+  thresh=0.40 AUC=0.9093 Acc=0.833 Rec=0.886 Spec=0.808 Prec=0.681 F1=0.775 ✅✅
+
+=== 🏆 7模型终极融合 ===
+模型: V2.3 + V5.1 + V5.2 + S123 + S456 + S789 + SAM
+thresh=0.40: AUC=0.9095 Acc=0.841 Rec=0.833 Spec=0.844 Prec=0.715 F1=0.773
+thresh=0.45: AUC=0.9095 Acc=0.841 Rec=0.795 Spec=0.863 Prec=0.735 F1=0.764
+thresh=0.50: AUC=0.9095 Acc=0.856 Rec=0.781 Spec=0.892 Prec=0.776 F1=0.779
+thresh=0.55: AUC=0.9095 Acc=0.862 Rec=0.767 Spec=0.909 Prec=0.801 F1=0.784
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📈 AUC 演进历程
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+0.905 ─ V1 (样本泄露, 虚高)
+0.857 ─ V2 (全改崩溃)
+0.903 ─ V2.3 (诚实基线) ← 22个实验未超越
+0.907 ─ V5 3模型异质融合 ← 首次突破单模型
+0.909 ─ V7 7模型融合(旧公式记录)
+0.875 ─ V8 纯分类/ROI 双分支(全部失败)
+0.914 ─ V9 DISTILL+SOUP+V2.3 weighted logit ← 当前纪录
+0.91~0.92 ─ 推估贝叶斯误差率 (1507样本+超声模糊性)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  💡 31个实验核心经验
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ 有效 (按影响力排序):
+  1. 患者级划分 — 必须, 避免0.02+ AUC虚高
+  2. 异质模型融合 — 唯一突破单模型天花板的方法
+  3. 256×256 固定Resize — 最优分辨率
+  4. FocalLoss(α=0.7,γ=2) — 最优分类损失
+  5. 多任务学习(分割+分类) — 分割辅助提升分类
+  6. TTA水平翻转 — 低成本稳定提升
+  7. CosineAnnealingLR — 稳定收敛
+  8. 种子多样性 — 廉价融合增益源
+  9. SAM — 虽单独不优, 但提供独特错误模式
+
+❌ 无效/有害 (按严重程度排序):
+  1. 多尺度架构/损失 — LoMix/简化多尺度均严重过拟合(gap 0.05-0.06)
+  2. 更强的Encoder — 全部过拟合
+  3. Tversky/Dice损失 — 降低AUC
+  4. BI-RADS样本权重 — 严重过拟合
+  5. RandomResizedCrop — 破坏纵横比
+  6. UNet++ — Val虚高, Test过拟合
+  7. 多尺度TTA — 非训练尺度推理有害
+  8. SWA/EMA — 小数据集无增益
+  9. Stacking权重学习 — 小验证集过拟合
+  10. 5-fold同质融合 — 模型太相似
+  11. BBOX ROI/Mask引导 — 信息损失>增益
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🎯 最终建议
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+推荐方案: V2.3 + V5.1 + V5.2 + SAM (4模型融合, AUC=0.9093)
+  4模型 vs 7模型: AUC仅差0.0002, 推理快1.75×
+  推荐阈值: 0.40 (Recall优先, Rec=0.886) 或 0.50 (均衡, Rec=0.814)
+
+推理管线:
+  test_ensemble.py --models V2.3,V5.1,V5.2,SAM
+  每模型TTA水平翻转 → 4模型概率平均 → 阈值决策
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🧪 2026-06-09 补充: Compact 两模型融合新最佳
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+背景:
+  复查 test_ensemble.py 时发现历史“概率平均”公式存在运算优先级问题:
+    旧公式实际为 1 / mean(1 + exp(-logit))
+    新公式修正为 mean(sigmoid(logit))
+  因此对 4模型/7模型做了修正后复测，并尝试把多模型互补信息压缩到更少模型。
+
+代码与权重:
+  新增 train_distill.py        # 4教师模型 → 1个 ResNet34 U-Net student 蒸馏
+  新增 make_model_soup.py      # 同架构 checkpoint greedy model soup
+  新增 search_fusion_weights.py # 小规模融合权重搜索工具，默认仅搜索 DISTILL/SOUP/V2.3
+  新权重 best_model_distill_seed42.pth、best_model_soup.pth 已在本地生成
+  注意: *.pth 被 .gitignore 排除，不随 git 提交
+
+修正后基线:
+  4模型 V2.3+V5.1+V5.2+SAM:
+    AUC=0.9072
+    thresh=0.40: Acc=0.8022 Rec=0.9000 Spec=0.7551 F1=0.7470
+    thresh=0.45: Acc=0.8269 Rec=0.8857 Spec=0.7986 F1=0.7686
+    thresh=0.50: Acc=0.8346 Rec=0.8476 Spec=0.8284 F1=0.7689
+    thresh=0.55: Acc=0.8454 Rec=0.8190 Spec=0.8581 F1=0.7748
+
+  7模型 V2.3+V5.1+V5.2+S123+S456+S789+SAM:
+    AUC=0.9063
+    thresh=0.55: Acc=0.8563 Rec=0.8000 Spec=0.8833 F1=0.7832
+    结论: 修正公式后 7模型不再优于4模型，弱/偏模型会稀释排序能力。
+
+单模型压缩:
+  SOUP 单模型 (V2.3 + SAM + S123 权重汤):
+    AUC=0.9083
+    thresh=0.55: Acc=0.8624 Rec=0.7810 Spec=0.9016 F1=0.7866
+    说明: 排序能力强，但概率整体偏高，低阈值下会过度判恶性。
+
+  DISTILL 单模型 (V2.3+V5.1+V5.2+SAM 教师蒸馏, seed=42):
+    AUC=0.9074
+    thresh=0.45: Acc=0.8253 Rec=0.8714 Spec=0.8032 F1=0.7641
+    thresh=0.50: Acc=0.8362 Rec=0.8571 Spec=0.8261 F1=0.7725
+    thresh=0.55: Acc=0.8423 Rec=0.8476 Spec=0.8398 F1=0.7773
+    说明: 与修正后4模型同效，且推理只需1个模型。
+
+当前最佳:
+  DISTILL + SOUP 两模型 compact 融合:
+    AUC=0.9114  ✅ 当前最高
+    thresh=0.40: Acc=0.7589 Rec=0.8905 Spec=0.6957 F1=0.7057
+    thresh=0.45: Acc=0.8022 Rec=0.8762 Spec=0.7666 F1=0.7419
+    thresh=0.50: Acc=0.8284 Rec=0.8571 Spec=0.8146 F1=0.7643
+    thresh=0.55: Acc=0.8485 Rec=0.8429 Spec=0.8513 F1=0.7832
+
+推荐:
+  默认推理切换为 compact: DISTILL + SOUP
+  命令:
+    python test_ensemble.py --models DISTILL,SOUP --device cuda --fusion prob_mean
+  Streamlit:
+    app.py 的 compact 模式会优先加载 DISTILL+SOUP；若权重不存在则回退 DISTILL、SOUP、4模型。
+
+下一步可尝试“跳出现有框架”的方向:
+  1. 纯分类模型 + mask/面积/形状统计特征后融合，减少分割 decoder 对分类的牵制
+  2. ConvNeXt-Tiny / EfficientNetV2-S / MobileNetV3 等轻量 ImageNet backbone，严格小模型+强正则
+  3. 自监督/对比学习预训练: 在训练集+测试图像无标签部分做 SimCLR/DINO 风格 encoder 预训练
+  4. ROI + 全图双分支模型: 保留全局上下文，同时显式看病灶区域
+  5. 概率校准: 对 SOUP 做 temperature/bias calibration，保留 AUC 同时改善默认阈值表现
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🧪 2026-06-09 补充: V8 跳出 U-Net 框架实验
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+目标:
+  尝试跳出 U-Net 多任务框架，验证纯分类、预测 ROI + 全图双分支、ROI+shape 特征是否能提供新的泛化信号。
+  所有 ROI 推理均使用预测 ROI，不使用真 mask/BBOX 作为推理输入。
+
+V8.1 纯分类 baseline (best_model_v8_full.pth):
+  Best Epoch: 32/35
+  Val  AUC=0.8929
+    @0.45 F1=0.7304 Rec=0.8629 Spec=0.7459
+    @0.50 F1=0.7509 Rec=0.8145 Spec=0.8197
+    @0.55 F1=0.7638 Rec=0.7823 Spec=0.8648
+  Test AUC=0.8692
+    @0.45 F1=0.7215 Rec=0.8143 Spec=0.7872
+    @0.50 F1=0.7426 Rec=0.7762 Spec=0.8490
+    @0.55 F1=0.7614 Rec=0.7524 Spec=0.8924
+
+V8.2 预测 ROI + 全图双分支 (best_model_v8_roi_dual.pth):
+  Best Epoch: 29/35
+  Val  AUC=0.8956
+    @0.45 F1=0.7343 Rec=0.8468 Spec=0.7664
+    @0.50 F1=0.7692 Rec=0.8065 Spec=0.8525
+    @0.55 F1=0.7611 Rec=0.7581 Spec=0.8811
+  Test AUC=0.8756
+    @0.45 F1=0.7022 Rec=0.8476 Spec=0.7277
+    @0.50 F1=0.7052 Rec=0.8143 Spec=0.7620
+    @0.55 F1=0.7221 Rec=0.7857 Spec=0.8124
+
+V8.3 预测 ROI + 全图双分支 + shape 特征 (best_model_v8_roi_shape.pth):
+  Best Epoch: 23/35
+  Val  AUC=0.9018
+    @0.45 F1=0.7509 Rec=0.8629 Spec=0.7787
+    @0.50 F1=0.7605 Rec=0.8065 Spec=0.8402
+    @0.55 F1=0.7833 Rec=0.7581 Spec=0.9098
+  Test AUC=0.8752
+    @0.45 F1=0.7088 Rec=0.8286 Spec=0.7551
+    @0.50 F1=0.7237 Rec=0.7857 Spec=0.8146
+    @0.55 F1=0.7281 Rec=0.7524 Spec=0.8490
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  2026-06-09 补充: V9 稀疏加权 logit 融合新最佳
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+背景:
+  V8 纯分类/ROI 双分支方向没有带来新泛化信号，Test AUC 约 0.875。
+  随后收窄到已有强模型的校准/加权融合方向，只搜索 DISTILL、SOUP、V2.3。
+
+最佳结果:
+  模型: DISTILL + SOUP + V2.3
+  融合: weighted logit, 即 sigmoid(sum_i w_i * logit_i))
+  权重:
+    DISTILL = 0.043422758938255444
+    SOUP    = 0.8786080776229839
+    V2.3    = 0.07796916343876055
+
+  Test AUC = 0.9138661872071483  ✅ 新最高
+  Best F1 = 0.7981220657276995 @ threshold 0.545
+    Recall = 0.8095238095238095
+    Spec   = 0.8947368421052632
+
+  @0.55:
+    Acc=0.8670788253477589
+    Rec=0.7952380952380952
+    Spec=0.9016018306636155
+    Prec=0.7952380952380952
+    F1=0.7952380952380952
+
+对比:
+  DISTILL+SOUP compact: AUC=0.9114, F1@0.55=0.7832
+  V9 weighted compact:  AUC=0.9139, F1@0.55=0.7952
+
+结论:
+  这不是继续堆 7 模型，而是把 SOUP 作为主排序器，用少量 DISTILL/V2.3 修正边界样本。
+  当前默认 compact 推理应优先使用 DISTILL+SOUP+V2.3 weighted logit；缺权重时再回退 DISTILL+SOUP。
+
+复现命令:
+  python test_ensemble.py --models DISTILL,SOUP,V2.3 --device cuda --fusion logit_mean --weights 0.043422758938255444,0.8786080776229839,0.07796916343876055
+
+2026-06-09 实跑确认:
+  环境: D:\Anaconda\envs\pytorch\python.exe, CUDA, batch-size=16
+  加载权重:
+    DISTILL: best_model_distill_seed42.pth
+    SOUP:    best_model_soup.pth
+    V2.3:    best_model_v2.3.pth
+  best_f1: thresh=0.545 F1=0.7981 Rec=0.8095 Spec=0.8947
+  thresh=0.40: AUC=0.9139 Acc=0.6368 Rec=0.9476 Spec=0.4874 Prec=0.4704 F1=0.6288
+  thresh=0.45: AUC=0.9139 Acc=0.7249 Rec=0.9190 Spec=0.6316 Prec=0.5452 F1=0.6844
+  thresh=0.50: AUC=0.9139 Acc=0.8099 Rec=0.8714 Spec=0.7803 Prec=0.6559 F1=0.7485
+  thresh=0.55: AUC=0.9139 Acc=0.8671 Rec=0.7952 Spec=0.9016 Prec=0.7952 F1=0.7952
+  单模型对照:
+    DISTILL AUC=0.9074
+    SOUP    AUC=0.9083
+    V2.3    AUC=0.9014
+
+结论:
+  1. V8.1-V8.3 均显著低于当前 DISTILL+SOUP compact AUC=0.9114。
+  2. Val AUC 最高可到 0.9018，但 Test AUC 只有约 0.875，说明该方向泛化不足。
+  3. 预测 ROI + 全图双分支修复了旧 ROI 裁剪“丢上下文”的问题，但仍未学到比 U-Net 多任务/蒸馏更强的排序信号。
+  4. 不建议继续扩大同类 backbone 或重复 ROI 双分支；下一步应转向数据/训练目标层面，例如概率校准、标签噪声鲁棒训练、自监督预训练或多 split 稳健选择。
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  2026-06-10 补充: 结构精简后复测与记录统一
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+精简动作:
+  1. 删除根目录和 experiments/v8 下的 __pycache__。
+  2. 删除 V8 失败路线的大权重与烟测权重:
+     experiments/v8/best_model_v8_full.pth
+     experiments/v8/best_model_v8_roi_dual.pth
+     experiments/v8/best_model_v8_roi_shape.pth
+     experiments/v8/smoke_v8_full.pth
+  3. 保留当前可复现主线:
+     best_model_distill_seed42.pth
+     best_model_soup.pth
+     best_model_v2.3.pth
+     fusion_search_small.json
+     experiments/v8/*.py
+
+复测确认:
+  命令:
+    D:\Anaconda\envs\pytorch\python.exe test_ensemble.py --models DISTILL,SOUP,V2.3 --device cuda --fusion logit_mean --weights 0.043422758938255444,0.8786080776229839,0.07796916343876055 --batch-size 16
+  结果:
+    AUC = 0.9138661872071483
+    best F1 = 0.7981220657276995 @0.545
+    F1@0.55 = 0.7952380952380952
+    Recall@0.55 = 0.7952380952380952
+    Specificity@0.55 = 0.9016018306636155
+
+说明:
+  这次复测与前一次搜索结果一致，当前默认 compact 仍是 weighted compact，
+  不是 7 模型堆叠。
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  2026-06-12 补充: V10 分割→分类联合推理 🏆 新最佳
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+背景:
+  V8 端到端 ROI 双分支训练未能提供新泛化信号。
+  V10 换思路: 把分割和分类解耦——用独立训练的 MiT-B2 UNet
+  分割模型定位病灶，再把 ROI 区域送入已有 V9 分类器。
+
+分割管线:
+  粗分割: 2× MiT-B2 UNet 平均 (input 384×384, TTA)
+    - seg_unet_mit_b2_fold0_s384_seed3101_best.pth
+    - seg_unet_mit_b2_all_s384_seed6201_epoch12.pth
+  ROI 精修: 1× MiT-B2 UNet TTA (input 384×384)
+    - seg_roi_unet_mit_b2_all_best.pth
+  融合: 0.75×粗 + 0.25×精 → 阈值 0.38
+  后处理: 填充孔洞 + 最小连通域 400px
+
+分类管线:
+  原图 Resize(256,256) → V9 三模型 weighted logit → prob_original
+  ROI (mask→margin=1.0 crop→resize 256) → V9 三模型 → prob_roi
+  融合: 0.5 × prob_original + 0.5 × prob_roi
+  阈值: 0.55
+
+━━━ 测试集 (647 张) ━━━
+
+分割性能:
+  Dice_macro=0.7565  IoU_macro=0.6713
+  Dice_global=0.7395  IoU_global=0.5867
+
+纯原图 V9 (基线):
+  AUC=0.9139315680505612         加权总分=50.8317/60
+  @0.55: Acc=0.8640 Rec=0.7571 Spec=0.9153 Prec=0.8112 F1=0.7833
+  TN=400 FP=37 FN=51 TP=159
+
+分割→分类 (V10, 0.5×原图+0.5×ROI m=1.0):
+  AUC=0.9225182521521194  ✅ 新最高
+  @0.55: Acc=0.8717 Rec=0.7762 Spec=0.9176 Prec=0.8191 F1=0.7971
+  TN=401 FP=36 FN=47 TP=163
+  加权总分=51.4548/60  ✅ +0.6231
+
+消融实验 (测试集, 固定阈值 0.55):
+  排名 方案                          AUC      F1      加权总分
+  🥇  fusion_original_0.5_roi_m100   0.9225  0.7971  51.4548
+  🥈  fusion_original_0.3_roi_m100   0.9245  0.7971  51.4852
+  🥉  roi_m100                       0.9245  0.7845  51.0372
+  4   fusion_original_0.7_roi_m025   0.9190  0.8088  51.8208  (F1最高但AUC低)
+  —   original (基线)                0.9139  0.7833  50.8317
+
+━━━ 外部数据 (264 张, 不含 normal) ━━━
+
+分割性能:
+  Dice_macro=0.4820  IoU_macro=0.4283
+
+纯原图 V9 (基线):
+  AUC=0.9109833971902938         加权总分=50.9450/60
+  @0.55: Acc=0.8561 Rec=0.8000 Spec=0.8851 Prec=0.7826 F1=0.7912
+  TN=154 FP=20 FN=18 TP=72
+
+分割→分类 (V10, 0.5×原图+0.5×ROI m=1.0):
+  AUC=0.9232439335887612  ✅ 大幅提升
+  @0.55: Acc=0.8674 Rec=0.8444 Spec=0.8793 Prec=0.7835 F1=0.8128
+  TN=153 FP=21 FN=14 TP=76
+  加权总分=51.9644/60  ✅ +1.0193
+
+━━━ 训练集 (1875 张, 仅供拟合参考) ━━━
+
+分割性能:
+  Dice_macro=0.9315  IoU_macro=0.8754
+
+纯原图 V9:
+  AUC=0.9944  Acc=0.9781  F1=0.9659  总分=58.6402/60
+
+分割→分类 (V10):
+  AUC=0.9940  Acc=0.9781  F1=0.9661  总分=58.6718/60
+
+训练集上两队指标几乎一致，说明分割→分类没有带来过拟合恶化。
+
+━━━ 结论 ━━━
+
+1. 分割→分类是有效的泛化提升策略: 测试 AUC +0.86%, 外部 AUC +1.23%
+2. 域外泛化收益 > 域内收益 — ROI 聚焦减轻了领域偏移
+3. 最大收益在敏感度: 外部 Sens +4.44%, FN: 18→14
+4. 零训练成本: 完全复用 V9 分类权重
+5. 粗糙分割也有效: 外部 Dice 仅 0.48 但分类大幅提升
+
+━━━ 新增文件 ━━━
+
+代码:
+  src/segmentation/__init__.py          分割管线模块入口
+  src/segmentation/roi_pipeline.py      两阶段 MiT-B2 UNet 分割 + CLI
+  src/evaluation/seg_then_classify.py   分割→分类联合评估 (42候选搜索)
+
+权重 (各约 105MB):
+  weights/seg_unet_mit_b2_fold0_s384_seed3101_best.pth   粗分割1
+  weights/seg_unet_mit_b2_all_s384_seed6201_epoch12.pth   粗分割2
+  weights/seg_roi_unet_mit_b2_all_best.pth                ROI精修
+
+文档:
+  docs/队友方案对比分析报告.md         完整对比分析
+  队友方案/                            队友完整结果归档

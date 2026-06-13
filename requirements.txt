@@ -1,0 +1,13 @@
+torch>=2.0
+torchvision
+segmentation-models-pytorch>=0.3
+albumentations>=1.3
+streamlit>=1.28
+opencv-python>=4.8
+pandas
+numpy
+matplotlib
+Pillow
+scikit-learn
+weasyprint>=60
+scipy

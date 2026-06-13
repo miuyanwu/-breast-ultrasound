@@ -1,0 +1,9 @@
+weights/*.pth filter=lfs diff=lfs merge=lfs -text
+weights/best_model_soup.pth filter=lfs diff=lfs merge=lfs -text
+weights/best_model_distill_seed42.pth filter=lfs diff=lfs merge=lfs -text
+weights/best_model_v2.3.pth filter=lfs diff=lfs merge=lfs -text
+weights/seg_roi_unet_mit_b2_all_best.pth filter=lfs diff=lfs merge=lfs -text
+weights/seg_unet_mit_b2_all_s384_seed6201_epoch12.pth filter=lfs diff=lfs merge=lfs -text
+weights/seg_unet_mit_b2_fold0_s384_seed3101_best.pth filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.pdf filter=lfs diff=lfs merge=lfs -text
